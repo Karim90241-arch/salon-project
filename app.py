@@ -13,7 +13,7 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # 1. جدول الحجوزات المطور
+    # جدول الحجوزات الشامل مع عمود الحالة status
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS bookings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,11 +22,11 @@ def init_db():
             service_id INTEGER NOT NULL,
             booking_date TEXT NOT NULL,
             booking_time TEXT NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP 
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'قيد الانتظار'
         )
     ''')
     
-    # 2. إنشاء جدول الخدمات الجديد
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS services (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +35,6 @@ def init_db():
         )
     ''')
     
-    # تفقد إذا كان جدول الخدمات فارغاً، لنضع فيه خدمات افتراضية لأول مرة فقط
     cursor.execute('SELECT COUNT(*) FROM services')
     if cursor.fetchone()[0] == 0:
         default_services = [
@@ -45,9 +44,14 @@ def init_db():
         ]
         cursor.executemany('INSERT INTO services (name, price) VALUES (?, ?)', default_services)
     
-    # التأكد من وجود عمود وقت الحجز في جدول الحجوزات
+    # تحديثات أمان لقواعد البيانات القديمة (إضافة الأعمدة إن لم تكن موجودة)
     try:
         cursor.execute("ALTER TABLE bookings ADD COLUMN created_at TEXT")
+    except sqlite3.OperationalError:
+        pass
+        
+    try:
+        cursor.execute("ALTER TABLE bookings ADD COLUMN status TEXT DEFAULT 'قيد الانتظار'")
     except sqlite3.OperationalError:
         pass
         
@@ -58,7 +62,6 @@ init_db()
 
 @app.route('/')
 def index():
-    # سحب الخدمات من قاعدة البيانات لعرضها في صفحة الحجز للزبون
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -84,8 +87,8 @@ def book():
         return "<h1>⚠️ عذرًا، هذا الحجز مسجل بالفعل مسبقاً!</h1><a href='/'>العودة ومحاولة وقت آخر</a>"
     
     cursor.execute('''
-        INSERT INTO bookings (client_name, client_phone, service_id, booking_date, booking_time, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO bookings (client_name, client_phone, service_id, booking_date, booking_time, created_at, status) 
+        VALUES (?, ?, ?, ?, ?, ?, 'قيد الانتظار')
     ''', (name, phone, service_id, date, time, current_now))
     conn.commit()
     conn.close()
@@ -111,31 +114,27 @@ def admin_dashboard():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # 1. جلب الحجوزات المعتادة
-    query = '''
+    bookings = cursor.execute('''
         SELECT bookings.*, services.name AS service_name, services.price AS service_price 
         FROM bookings 
         LEFT JOIN services ON bookings.service_id = services.id 
         ORDER BY bookings.id DESC
-    '''
-    bookings = cursor.execute(query).fetchall()
+    ''').fetchall()
     
-    # 2. جلب قائمة الخدمات
     services = cursor.execute('SELECT * FROM services').fetchall()
     
-    # 📈 3. حساب الإحصائيات الذكية:
-    # أ) إجمالي عدد الحجوزات
+    # حساب الإحصائيات
     total_bookings = cursor.execute('SELECT COUNT(*) FROM bookings').fetchone()[0]
     
-    # ب) حساب إجمالي الأرباح المتوقعة
+    # الأرباح المتوقعة المحسوبة فقط من المواعيد (المؤكدة أو المكتملة)
     total_revenue = cursor.execute('''
         SELECT SUM(services.price) 
         FROM bookings 
         JOIN services ON bookings.service_id = services.id
+        WHERE bookings.status IN ('مؤكد', 'مكتمل')
     ''').fetchone()[0]
-    if total_revenue is None: total_revenue = 0 # إذا لم تكن هناك حجوزات، يكون المجموع 0
+    if total_revenue is None: total_revenue = 0
     
-    # ج) معرفة أكثر خدمة مطلوبة
     most_popular_query = '''
         SELECT services.name, COUNT(bookings.id) as count 
         FROM bookings 
@@ -147,8 +146,6 @@ def admin_dashboard():
     most_popular_service = popular_result[0] if popular_result else "لا توجد حجوزات بعد"
     
     conn.close()
-    
-    # نرسل الأرقام الجديدة إلى ملف HTML وعرضها
     return render_template('dashboard.html', 
                            bookings=bookings, 
                            services=services,
@@ -156,14 +153,25 @@ def admin_dashboard():
                            total_revenue=total_revenue,
                            most_popular_service=most_popular_service)
 
-# ➕ مسار جديد لإضافة خدمة من لوحة التحكم
+# 🔄 مسار جديد لتحديث حالة الحجز
+@app.route('/update_status/<int:booking_id>/<string:new_status>')
+def update_status(booking_id, new_status):
+    if not session.get('logged_in'):
+        return redirect('/login')
+        
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE bookings SET status = ? WHERE id = ?', (new_status, booking_id))
+    conn.commit()
+    conn.close()
+    return redirect('/admin')
+
 @app.route('/add_service', methods=['POST'])
 def add_service():
     if not session.get('logged_in'):
         return redirect('/login')
     name = request.form['service_name']
     price = request.form['service_price']
-    
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('INSERT INTO services (name, price) VALUES (?, ?)', (name, price))
@@ -171,7 +179,6 @@ def add_service():
     conn.close()
     return redirect('/admin')
 
-# 🗑️ مسار جديد لحذف خدمة من لوحة التحكم
 @app.route('/delete_service/<int:service_id>')
 def delete_service(service_id):
     if not session.get('logged_in'):
@@ -187,7 +194,6 @@ def delete_service(service_id):
 def delete_booking(booking_id):
     if not session.get('logged_in'):
         return redirect('/login')
-        
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('DELETE FROM bookings WHERE id = ?', (booking_id,))

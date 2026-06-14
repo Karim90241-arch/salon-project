@@ -6,9 +6,8 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 30px; }
         h1, h2 { color: #2c3e50; text-align: center; }
-        .container { max-width: 1100px; margin: 0 auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
         
-        /* تصميم مربعات الإحصائيات */
         .stats-container { display: flex; gap: 20px; margin-bottom: 30px; justify-content: space-between; }
         .stat-card { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); text-align: center; border-top: 5px solid #2c3e50; }
         .stat-card.blue { border-top-color: #3498db; }
@@ -18,12 +17,23 @@
         .stat-card p { margin: 0; font-size: 24px; font-weight: bold; color: #2c3e50; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; margin-bottom: 40px; }
-        th, td { padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; font-size: 14px; }
         th { background-color: #34495e; color: white; }
         tr:hover { background-color: #f1f1f1; }
-        .badge { background-color: #f39c12; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
-        .btn-delete { background-color: #e74c3c; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
+        
+        /* ألوان حالات المواعيد الاحترافية */
+        .badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; color: white; font-weight: bold; }
+        .badge.waiting { background-color: #e67e22; }      /* برتقالي لقيد الانتظار */
+        .badge.confirmed { background-color: #2980b9; }    /* أزرق للمؤكد */
+        .badge.completed { background-color: #27ae60; }    /* أخضر للمكتمل */
+
+        /* أزرار الإجراءات */
+        .btn-status { text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: white; margin-left: 3px; font-weight: bold; }
+        .btn-confirm { background-color: #3498db; }
+        .btn-complete { background-color: #2ecc71; }
+        .btn-delete { background-color: #e74c3c; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 13px; }
         .btn-delete:hover { background-color: #c0392b; }
+        
         .management-section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); }
         .form-inline { display: flex; gap: 15px; margin-bottom: 20px; }
         .form-inline input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
@@ -42,12 +52,12 @@
             <p>{{ total_bookings }} حجز</p>
         </div>
         <div class="stat-card green">
-            <h3>💰 الأرباح المتوقعة</h3>
+            <h3>💰 الأرباح المؤكدة</h3>
             <p>{{ total_revenue }} دج</p>
         </div>
         <div class="stat-card purple">
             <h3>⭐ الخدمة الأكثر طلباً</h3>
-            <p style="font-size: 18px; color: #8e44ad;">{{ most_popular_service }}</p>
+            <p style="font-size: 17px; color: #8e44ad;">{{ most_popular_service }}</p>
         </div>
     </div>
     
@@ -63,6 +73,7 @@
                 <th>الوقت المطلوب</th>
                 <th>وقت تسجيل الطلب</th> 
                 <th>الحالة</th>
+                <th>تحديث الحالة</th>
                 <th>الإجراءات</th>
             </tr>
         </thead>
@@ -76,10 +87,25 @@
                 <td>{{ booking['service_price'] if booking['service_price'] else '-' }} دج</td>
                 <td>{{ booking['booking_date'] }}</td>
                 <td>{{ booking['booking_time'] }}</td>
-                <td style="color: #7f8c8d; font-size: 13px;">{{ booking['created_at'] or 'غير مسجل' }}</td> 
-                <td><span class="badge">قيد الانتظار</span></td>
+                <td style="color: #7f8c8d; font-size: 12px;">{{ booking['created_at'] or 'غير مسجل' }}</td> 
+                
                 <td>
-                    <a href="/delete/{{ booking['id'] }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')">إلغاء الحجز</a>
+                    {% if booking['status'] == 'مؤكد' %}
+                        <span class="badge confirmed">مؤكد</span>
+                    {% elif booking['status'] == 'مكتمل' %}
+                        <span class="badge completed">مكتمل</span>
+                    {% else %}
+                        <span class="badge waiting">قيد الانتظار</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <a href="/update_status/{{ booking['id'] }}/مؤكد" class="btn-status btn-confirm">تأكيد ✅</a>
+                    <a href="/update_status/{{ booking['id'] }}/مكتمل" class="btn-status btn-complete">اكتمل 🏁</a>
+                </td>
+
+                <td>
+                    <a href="/delete/{{ booking['id'] }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')">إلغاء</a>
                 </td>
             </tr>
             {% endfor %}
