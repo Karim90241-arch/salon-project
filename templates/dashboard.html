@@ -2,67 +2,41 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>لوحة تحكم الصالون - إدارة الحجوزات</title>
+    <title>لوحة تحكم الصالون - إدارة متكاملة</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f7f6;
-            padding: 30px;
-        }
-        h1 { color: #2c3e50; text-align: center; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        th, td {
-            padding: 12px 15px;
-            text-align: right;
-            border-bottom: 1px solid #ddd;
-        }
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 30px; }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; margin-bottom: 40px; }
+        th, td { padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; }
         th { background-color: #34495e; color: white; }
         tr:hover { background-color: #f1f1f1; }
-        .badge {
-            background-color: #f39c12;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        /* تصميم زر الحذف الأحمر */
-        .btn-delete {
-            background-color: #e74c3c;
-            color: white;
-            text-decoration: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .btn-delete:hover {
-            background-color: #c0392b;
-        }
+        .badge { background-color: #f39c12; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+        .btn-delete { background-color: #e74c3c; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
+        .btn-delete:hover { background-color: #c0392b; }
+        .management-section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); }
+        .form-inline { display: flex; gap: 15px; margin-bottom: 20px; }
+        .form-inline input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
+        .btn-add { background-color: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
+<div class="container">
     <h1>📋 لوحة إدارة الحجوزات الحالية</h1>
-    <p style="text-align: center;">هنا تجد كل الزبائن الذين قاموا بالحجز عبر الموقع</p>
-
-   <table>
+    
+    <table>
         <thead>
             <tr>
                 <th>رقم الحجز</th>
                 <th>اسم الزبون</th>
                 <th>رقم الهاتف</th>
-                <th>رقم الخدمة</th>
+                <th>الخدمة المطلوبة</th>
+                <th>السعر</th>
                 <th>التاريخ المطلوب</th>
                 <th>الوقت المطلوب</th>
-                <th>وقت تسجيل الطلب</th> <th>الحالة</th>
+                <th>وقت تسجيل الطلب</th> 
+                <th>الحالة</th>
                 <th>الإجراءات</th>
             </tr>
         </thead>
@@ -72,10 +46,12 @@
                 <td>{{ booking['id'] }}</td>
                 <td>{{ booking['client_name'] }}</td>
                 <td>{{ booking['client_phone'] }}</td>
-                <td>{{ booking['service_id'] }}</td>
+                <td>{{ booking['service_name'] if booking['service_name'] else 'خدمة محذوفة' }}</td>
+                <td>{{ booking['service_price'] if booking['service_price'] else '-' }} دج</td>
                 <td>{{ booking['booking_date'] }}</td>
                 <td>{{ booking['booking_time'] }}</td>
-                <td style="color: #7f8c8d; font-size: 13px;">{{ booking['created_at'] or 'غير مسجل مسبقاً' }}</td> <td><span class="badge">قيد الانتظار</span></td>
+                <td style="color: #7f8c8d; font-size: 13px;">{{ booking['created_at'] or 'غير مسجل' }}</td> 
+                <td><span class="badge">قيد الانتظار</span></td>
                 <td>
                     <a href="/delete/{{ booking['id'] }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')">إلغاء الحجز</a>
                 </td>
@@ -84,9 +60,47 @@
         </tbody>
     </table>
 
-    <p style="text-align: center; margin-top: 20px;">
+    <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
+    <div class="management-section">
+        <h2>🛠️ إدارة خدمات الصالون وأسعارها</h2>
+        
+        <form action="/add_service" method="POST" class="form-inline">
+            <input type="text" name="service_name" placeholder="اسم الخدمة الجديدة (مثال: تنظيف بشرة)" required style="flex: 2;">
+            <input type="number" name="service_price" placeholder="السعر بالدج" required style="flex: 1;">
+            <button type="submit" class="btn-add">➕ إضافة الخدمة للقائمة</button>
+        </form>
+
+        <table style="margin-top: 10px; box-shadow: none; border: 1px solid #eee;">
+            <thead>
+                <tr style="background-color: #7f8c8d;">
+                    <th>رقم الخدمة</th>
+                    <th>اسم الخدمة</th>
+                    <th>السعر الحالي</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for service in services %}
+                <tr>
+                    <td>{{ service['id'] }}</td>
+                    <td>{{ service['name'] }}</td>
+                    <td>{{ service['price'] }} دج</td>
+                    <td>
+                        <a href="/delete_service/{{ service['id'] }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من حذف هذه الخدمة نهائياً من الموقع؟')">حذف الخدمة</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <p style="text-align: center; margin-top: 30px;">
         <a href="/" style="color: #27ae60; text-decoration: none; font-weight: bold;">← العودة لصفحة الحجز للزبائن</a>
+        <span style="margin: 0 10px;">|</span>
+        <a href="/logout" style="color: #e74c3c; text-decoration: none; font-weight: bold;">تسجيل الخروج 🚪</a>
     </p>
+</div>
 
 </body>
 </html>

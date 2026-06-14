@@ -1,7 +1,7 @@
 import sqlite3
 from flask import Flask, render_template, request, redirect, session
 import os
-from datetime import datetime # 📅 مكتبة التعامل مع الوقت والتاريخ لالتقاط لحظة الحجز
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "minde_secret_key_123" 
@@ -12,7 +12,8 @@ ADMIN_PASSWORD = "123"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # أنشأنا الجدول وأضفنا عمود created_at لتسجيل وقت الحجز تلقائياً إذا لم يكن موجوداً
+    
+    # 1. جدول الحجوزات المطور
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS bookings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,11 +26,30 @@ def init_db():
         )
     ''')
     
-    # ⚠️ حركة ذكية: إذا كان الجدول قديم وموجود مسبقاً، نضيف العمود الجديد له لكي لا تضيع الحجوزات السابقة
+    # 2. إنشاء جدول الخدمات الجديد
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            price INTEGER NOT NULL
+        )
+    ''')
+    
+    # تفقد إذا كان جدول الخدمات فارغاً، لنضع فيه خدمات افتراضية لأول مرة فقط
+    cursor.execute('SELECT COUNT(*) FROM services')
+    if cursor.fetchone()[0] == 0:
+        default_services = [
+            ("تدليك استرخائي كامل (60 دقيقة)", 3000),
+            ("تدليك علاجي للظهر (45 دقيقة)", 2500),
+            ("العناية بالوجه والجسد (90 دقيقة)", 5000)
+        ]
+        cursor.executemany('INSERT INTO services (name, price) VALUES (?, ?)', default_services)
+    
+    # التأكد من وجود عمود وقت الحجز في جدول الحجوزات
     try:
         cursor.execute("ALTER TABLE bookings ADD COLUMN created_at TEXT")
     except sqlite3.OperationalError:
-        pass # العمود موجود بالفعل، لا داعي لفعل شيء
+        pass
         
     conn.commit()
     conn.close()
@@ -38,7 +58,13 @@ init_db()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # سحب الخدمات من قاعدة البيانات لعرضها في صفحة الحجز للزبون
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    services = cursor.execute('SELECT * FROM services').fetchall()
+    conn.close()
+    return render_template('index.html', services=services)
 
 @app.route('/book', methods=['POST'])
 def book():
@@ -48,7 +74,6 @@ def book():
     date = request.form['date']
     time = request.form['time']
     
-    # ⏱️ التقاط الوقت والتاريخ الحالي لحظة ضغط الزر بتنسيق أنيق (سنة-شهر-يوم ساعة:دقيقة)
     current_now = datetime.now().strftime("%Y-%m-%d %H:%M")
     
     conn = sqlite3.connect(DB_NAME)
@@ -58,7 +83,6 @@ def book():
         conn.close()
         return "<h1>⚠️ عذرًا، هذا الحجز مسجل بالفعل مسبقاً!</h1><a href='/'>العودة ومحاولة وقت آخر</a>"
     
-    # حفظ الوقت المباشر في قاعدة البيانات في خانة created_at
     cursor.execute('''
         INSERT INTO bookings (client_name, client_phone, service_id, booking_date, booking_time, created_at) 
         VALUES (?, ?, ?, ?, ?, ?)
@@ -86,9 +110,48 @@ def admin_dashboard():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    bookings = cursor.execute('SELECT * FROM bookings ORDER BY id DESC').fetchall()
+    
+    # جلب الحجوزات مع اسم الخدمة وسعرها عبر دمج الجدولين (JOIN)
+    query = '''
+        SELECT bookings.*, services.name AS service_name, services.price AS service_price 
+        FROM bookings 
+        LEFT JOIN services ON bookings.service_id = services.id 
+        ORDER BY bookings.id DESC
+    '''
+    bookings = cursor.execute(query).fetchall()
+    
+    # جلب قائمة الخدمات لعرضها والتحكم بها في لوحة التحكم لاحقاً
+    services = cursor.execute('SELECT * FROM services').fetchall()
+    
     conn.close()
-    return render_template('dashboard.html', bookings=bookings)
+    return render_template('dashboard.html', bookings=bookings, services=services)
+
+# ➕ مسار جديد لإضافة خدمة من لوحة التحكم
+@app.route('/add_service', methods=['POST'])
+def add_service():
+    if not session.get('logged_in'):
+        return redirect('/login')
+    name = request.form['service_name']
+    price = request.form['service_price']
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO services (name, price) VALUES (?, ?)', (name, price))
+    conn.commit()
+    conn.close()
+    return redirect('/admin')
+
+# 🗑️ مسار جديد لحذف خدمة من لوحة التحكم
+@app.route('/delete_service/<int:service_id>')
+def delete_service(service_id):
+    if not session.get('logged_in'):
+        return redirect('/login')
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM services WHERE id = ?', (service_id,))
+    conn.commit()
+    conn.close()
+    return redirect('/admin')
 
 @app.route('/delete/<int:booking_id>')
 def delete_booking(booking_id):
