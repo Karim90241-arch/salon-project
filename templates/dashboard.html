@@ -53,17 +53,18 @@
     <h1>📋 لوحة إدارة الحجوزات الحالية</h1>
     <p style="text-align: center;">هنا تجد كل الزبائن الذين قاموا بالحجز عبر الموقع</p>
 
-    <table>
+   <table>
         <thead>
             <tr>
                 <th>رقم الحجز</th>
                 <th>اسم الزبون</th>
                 <th>رقم الهاتف</th>
                 <th>رقم الخدمة</th>
-                <th>التاريخ</th>
-                <th>الوقت</th>
-                <th>الحالة</th>
-                <th>الإجراءات</th> </tr>
+                <th>التاريخ المطلوب</th>
+                <th>الوقت المطلوب</th>
+                <th>وقت تسجيل الطلب</th> <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
         </thead>
         <tbody>
             {% for booking in bookings %}
@@ -74,7 +75,7 @@
                 <td>{{ booking['service_id'] }}</td>
                 <td>{{ booking['booking_date'] }}</td>
                 <td>{{ booking['booking_time'] }}</td>
-                <td><span class="badge">قيد الانتظار</span></td>
+                <td style="color: #7f8c8d; font-size: 13px;">{{ booking['created_at'] or 'غير مسجل مسبقاً' }}</td> <td><span class="badge">قيد الانتظار</span></td>
                 <td>
                     <a href="/delete/{{ booking['id'] }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')">إلغاء الحجز</a>
                 </td>
