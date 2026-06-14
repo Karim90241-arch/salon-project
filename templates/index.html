@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 صالون الراحة والعناية - حجز الجلسات</title>
+    <style>
+        /* إعدادات الألوان العامة المريحة والنظيفة */
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #27ae60;
+            --bg-color: #f9f9f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* الشريط العلوي */
+        .navbar {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar .logo {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        /* القسم الترحيبي العريض */
+        .hero {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+        .hero h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+        }
+        .hero p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        /* حاوية المحتوى العام */
+        .main-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* عنوان الأقسام */
+        .section-title {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-size: 26px;
+            position: relative;
+        }
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 50px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin: 10px auto 0 auto;
+            border-radius: 2px;
+        }
+
+        /* استمارة الحجز الأنيقة */
+        .booking-card {
+            background-color: var(--card-bg);
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0px 8px 25px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+
+        /* زر التأكيد الاحترافي */
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #219653;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* تذييل الصفحة */
+        footer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+            font-size: 14px;
+            color: #777;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="logo">🌸 صالون الراحة</div>
+        <div style="font-size: 14px; opacity: 0.8;">هاتف: 06XXXXXXXX</div>
+    </div>
+
+    <div class="hero">
+        <h1>استعد لتجديد طاقتك واسترخائك التام</h1>
+        <p>نقدم أفضل جلسات التدليك والعناية الجسدية بأيدي خبراء متخصصين</p>
+    </div>
+
+    <div class="main-container">
+        
+        <h2 class="section-title">احجز جلستك الآن بثوانٍ</h2>
+
+        <div class="booking-card">
+            <form action="/book" method="POST">
+                <div class="form-group">
+                    <label for="name">الاسم الكامل:</label>
+                    <input type="text" id="name" name="name" placeholder="أدخل اسمك هنا" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">رقم الهاتف:</label>
+                    <input type="tel" id="phone" name="phone" placeholder="مثال: 06XXXXXXXX" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="service">اختر نوع الخدمة الطبية أو الاسترخائية:</label>
+                    <select id="service" name="service_id">
+                        <option value="1">تدليك استرخائي كامل (60 دقيقة) - 3000 دج</option>
+                        <option value="2">تدليك علاجي للظهر (45 دقيقة) - 2500 دج</option>
+                        <option value="3">العناية بالوجه والجسد (90 دقيقة) - 5000 دج</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="date">اختر التاريخ المناسب لك:</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="time">اختر وقت الجلسة:</label>
+                    <input type="time" id="time" name="time" required>
+                </div>
+
+                <button type="submit">تأكيد حجز الموعد المباشر</button>
+            </form>
+        </div>
+
+    </div>
+
+    <footer>
+        جميع الحقوق محفوظة © صالون الراحة والعناية 2026
+    </footer>
+
+</body>
+</html>
