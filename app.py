@@ -111,7 +111,7 @@ def admin_dashboard():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # جلب الحجوزات مع اسم الخدمة وسعرها عبر دمج الجدولين (JOIN)
+    # 1. جلب الحجوزات المعتادة
     query = '''
         SELECT bookings.*, services.name AS service_name, services.price AS service_price 
         FROM bookings 
@@ -120,11 +120,41 @@ def admin_dashboard():
     '''
     bookings = cursor.execute(query).fetchall()
     
-    # جلب قائمة الخدمات لعرضها والتحكم بها في لوحة التحكم لاحقاً
+    # 2. جلب قائمة الخدمات
     services = cursor.execute('SELECT * FROM services').fetchall()
     
+    # 📈 3. حساب الإحصائيات الذكية:
+    # أ) إجمالي عدد الحجوزات
+    total_bookings = cursor.execute('SELECT COUNT(*) FROM bookings').fetchone()[0]
+    
+    # ب) حساب إجمالي الأرباح المتوقعة
+    total_revenue = cursor.execute('''
+        SELECT SUM(services.price) 
+        FROM bookings 
+        JOIN services ON bookings.service_id = services.id
+    ''').fetchone()[0]
+    if total_revenue is None: total_revenue = 0 # إذا لم تكن هناك حجوزات، يكون المجموع 0
+    
+    # ج) معرفة أكثر خدمة مطلوبة
+    most_popular_query = '''
+        SELECT services.name, COUNT(bookings.id) as count 
+        FROM bookings 
+        JOIN services ON bookings.service_id = services.id 
+        GROUP BY bookings.service_id 
+        ORDER BY count DESC LIMIT 1
+    '''
+    popular_result = cursor.execute(most_popular_query).fetchone()
+    most_popular_service = popular_result[0] if popular_result else "لا توجد حجوزات بعد"
+    
     conn.close()
-    return render_template('dashboard.html', bookings=bookings, services=services)
+    
+    # نرسل الأرقام الجديدة إلى ملف HTML وعرضها
+    return render_template('dashboard.html', 
+                           bookings=bookings, 
+                           services=services,
+                           total_bookings=total_bookings,
+                           total_revenue=total_revenue,
+                           most_popular_service=most_popular_service)
 
 # ➕ مسار جديد لإضافة خدمة من لوحة التحكم
 @app.route('/add_service', methods=['POST'])
